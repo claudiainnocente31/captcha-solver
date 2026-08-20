@@ -1,33 +1,30 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
-import easyocr
+import pytesseract
 import io
 from PIL import Image
-import numpy as np
 import re
 
 app = FastAPI()
 
-# Deep Learning Model Load (पहली बार 3s लेता है, फिर 0.1s में काम करता है)
-reader = easyocr.Reader(['en'], gpu=False)
+# Render.com के सिस्टम पर Tesseract का पाथ
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 @app.get("/")
 def home():
-    return {"message": "Free Deep AI Captcha Solver (0.1s Speed)"}
+    return {"message": "Free Captcha Solver (Low Memory)"}
 
 @app.post("/solve")
 async def solve_captcha(file: UploadFile = File(...)):
     try:
         contents = await file.read()
         image = Image.open(io.BytesIO(contents))
-        image_np = np.array(image)
 
-        # Deep Learning Run
-        result = reader.readtext(image_np, detail=0, paragraph=False)
-        text = "".join(result)
+        # Tesseract कॉन्फिग (सिर्फ अल्फान्यूमेरिक + Math)
+        custom_config = r'--oem 3 --psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-*/='
+        captcha_text = pytesseract.image_to_string(image, config=custom_config)
 
-        # Only Alphanumeric & Math symbols
-        clean_text = re.sub(r'[^A-Za-z0-9+\-*/=]', '', text).strip()
+        clean_text = re.sub(r'[^A-Za-z0-9+\-*/=]', '', captcha_text).strip()
 
         # Math Solve (अगर हो तो)
         if any(op in clean_text for op in ['+', '-', '*', '/']):
