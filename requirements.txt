@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-easyocr
+pytesseract
 pillow
-numpy
 python-multipart
